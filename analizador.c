@@ -47,8 +47,8 @@ uint8_t palabra_reservada(char buffer[])
 
 int main()
 {
-    char operadores_especiales[] = "><+/-*%%^!=(){}[],:.";
-
+    char operadores_especiales[] = "><+/-*%%^!=(){}[],:.&|\"";
+    char str[] = "\"";
     FILE *filein;
     FILE *fileout;
     filein = fopen("in01.txt","r");
@@ -61,7 +61,7 @@ int main()
     uint8_t char_esp;
     uint16_t fila = 1;
     uint16_t columna = 1;
-    char buffer[50];
+    char buffer[500];
 
     if(filein == NULL){
         printf(">>>>No se encontro el archivo a abrir\n");
@@ -72,7 +72,7 @@ int main()
     {
       while(chat_read == '#')
       {
-        ++fila;
+        ++columna;
         chat_read = fgetc(filein);
       }
       char_ok = 1;
@@ -83,43 +83,33 @@ int main()
       if(isalnum(chat_read))
       {
         buffer[j++] = chat_read;
+        if(palabra_reservada(buffer) == 1)
+        {
+          buffer[j]='\0';
+          fprintf(fileout, "<%s,%d,%d>\n", pal_res[pos], fila, columna-j+1);
+          for(uint8_t i = 0;i < sizeof(buffer); ++i)buffer[i]='\0';
+          j = 0;
+        }
+
       }
       else
       {
-
         /*
         * Look for any special character
         */
-        for(i = 0; i < 20; ++i)
+        for(i = 0; i < sizeof(operadores_especiales); ++i)
         {
           if(chat_read == operadores_especiales[i])
           {
+            fprintf(fileout, "<%s,%d,%d>\n", tokens_esp[i], fila, columna);
             char_esp = 1;
             break;
           }
         }
 
-        if(char_esp == 1)
-        {
-          if(palabra_reservada(buffer) == 1)
-          {
-            buffer[j]='\0';
-            fprintf(fileout, "<%s,%d,%d>\n", pal_res[pos], fila, columna-j);
-            for(uint8_t i = 0;i < sizeof(buffer); ++i)buffer[i]='\0';
-            j = 0;
-          }
-          fprintf(fileout, "<%s,%d,%d>\n", tokens_esp[i], fila, columna);
-        }
 
         if(chat_read == 0x0A || chat_read == 0x0D || chat_read == 0x20 || chat_read == 0x09)
         {
-          if(palabra_reservada(buffer) == 1)
-          {
-            buffer[j]='\0';
-            fprintf(fileout, "<%s,%d,%d>\n", pal_res[pos], fila, columna-j);
-            for(uint8_t i = 0;i < sizeof(buffer); ++i)buffer[i]='\0';
-            j = 0;
-          }
           if(chat_read == 0x0A)
           {
             ++fila;
@@ -128,7 +118,12 @@ int main()
         }
         else
         {
-          if(char_esp == 0)
+          if(char_esp == 1)
+          {
+            fprintf(fileout, "<id,%s,%d,%d>\n", buffer, fila, columna-j);
+            j = 0;
+          }
+          else
           {
             char_ok = 0;
           }
